@@ -7,6 +7,8 @@ import tornado.httpserver, tornado.ioloop, tornado.options, tornado.web, os.path
 from tornado.options import define, options
 
 from s3_client import upload_file_to_s3
+from zencoder_client import convert_to_mp4
+import time
 
 define("port", default=8888, help="run on the given port", type=int)
 
@@ -17,6 +19,7 @@ s3_api_key = ''
 s3_secret_key = ''
 s3_bucket_name = 'cristnascimento-bucket'
 s3_server = 'https://s3.amazonaws.com/'
+zencoder_api_key = ''
 
 class Application(tornado.web.Application):
     def __init__(self):
@@ -56,13 +59,15 @@ class UploadHandler(tornado.web.RequestHandler):
  	player linking to the MP4 file in Zencoder S3 Server.
 	"""
 	filename = self.save_file(self.request, path_to_save)
-	upload_file_to_s3(path_to_save + filename,
-			  filename,
+        upload_file_to_s3(path_to_save + filename,
+                          filename,
                           s3_bucket_name,
                           s3_api_key,
                           s3_secret_key)
-	entry = "/videos/" + filename
-	self.render("player.html", entry=entry)
+	s3_file_url = s3_server + s3_bucket_name + "/" + filename
+        zencoder_url_converted = convert_to_mp4(zencoder_api_key, s3_file_url)
+
+	self.render("player.html", entry=zencoder_url_converted)
 
 def main():
     http_server = tornado.httpserver.HTTPServer(Application())

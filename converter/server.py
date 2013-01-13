@@ -6,10 +6,17 @@
 import tornado.httpserver, tornado.ioloop, tornado.options, tornado.web, os.path, random, string
 from tornado.options import define, options
 
+from s3_client import upload_file_to_s3
+
 define("port", default=8888, help="run on the given port", type=int)
 
 # directory where files will be written
 path_to_save = "/tmp/videos/"
+default_filename = "sample"
+s3_api_key = ''
+s3_secret_key = ''
+s3_bucket_name = 'cristnascimento-bucket'
+s3_server = 'https://s3.amazonaws.com/'
 
 class Application(tornado.web.Application):
     def __init__(self):
@@ -32,7 +39,7 @@ class UploadHandler(tornado.web.RequestHandler):
         file1 = request.files['file1'][0]
         original_fname = file1['filename']
         extension = os.path.splitext(original_fname)[1]
-        final_filename= "sample"+extension
+        final_filename= default_filename + extension
         output_file = open(path + final_filename, 'w')
         output_file.write(file1['body'])
         return final_filename
@@ -49,6 +56,11 @@ class UploadHandler(tornado.web.RequestHandler):
  	player linking to the MP4 file in Zencoder S3 Server.
 	"""
 	filename = self.save_file(self.request, path_to_save)
+	upload_file_to_s3(path_to_save + filename,
+			  filename,
+                          s3_bucket_name,
+                          s3_api_key,
+                          s3_secret_key)
 	entry = "/videos/" + filename
 	self.render("player.html", entry=entry)
 
